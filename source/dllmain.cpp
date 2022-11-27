@@ -45,7 +45,7 @@ int __cdecl sub_490860(int a1) {
 	sleepTime = 0;
 	// Loop until next frame due
 	do {
-		sleepTime = (16949 * framerateFactor - (uint32_t)ElapsedMicroseconds.QuadPart) / 1000; // calculate sleep time, 16949 µs = 59 fps (to limit frame drops)
+		sleepTime = (16949 * framerateFactor - (uint32_t)ElapsedMicroseconds.QuadPart) / 1000; // calculate sleep time, 16949 Âµs = 59 fps (to limit frame drops)
 		sleepTime = ((sleepTime / tc.wPeriodMin) * tc.wPeriodMin) - tc.wPeriodMin; // truncate to multiple of period
 		if (sleepTime > 0)
 			Sleep(sleepTime); // sleep to avoid wasted CPU
@@ -162,6 +162,69 @@ DWORD WINAPI Init(LPVOID bDelay)
 		pattern = hook::pattern("8D 44 24 10 50 57 E8 ? ? ? ? 83"); //4317EC
 		sub_49D910_addr = ((uintptr_t)pattern.get_first(11) + *pattern.get_first<uintptr_t>(7));
 		injector::MakeCALL(pattern.get_first(6), sub_49D910);
+	}
+
+	/* Fix texture-mapping bugs */
+	if (iniReader.ReadBoolean(INI_KEY, "TextureFix", true)) {
+		pattern = hook::pattern("DD 45 F4 5B DD 58 10 A1 ?? ?? ?? ?? C9 C3"); //4DBD3D
+		char textureFix[] = {0x8B, 0xD1,
+							 0xC1, 0xE9, 0x02,
+							 0x56,
+							 0x51,
+							 0xD9, 0x46, 0x1C,
+							 0xC7, 0x46, 0x1C, 0x00, 0x00, 0x80, 0x37,
+							 0xD8, 0x46, 0x1C,
+							 0xD9, 0x5E, 0x1C,
+							 0xD9, 0x46, 0x20,
+							 0xC7, 0x46, 0x20, 0x00, 0x00, 0x80, 0x37,
+							 0xD8, 0x46, 0x20,
+							 0xD9, 0x5E, 0x20,
+							 0x83, 0xC6, 0x24,
+						     0x83, 0xE9, 0x09,
+							 0x75, 0xD8,
+							 0x59,
+							 0x5E,
+							 0xC3};
+		injector::WriteMemoryRaw(pattern.get_first(0x1E), textureFix, sizeof(textureFix), true);
+
+		auto textureJump = hook::pattern("8B D1 C1 E9 02 F3 A5 8B CA EB AB"); //4B300E
+		injector::WriteMemory<uint8_t>(textureJump.get_first(0), '\xE8', true);
+		injector::WriteMemory(textureJump.get_first(1), (int) pattern.get_first(0x1E) - (int) textureJump.get_first(5), true);
+	}
+
+	/* Fix broken disk launcher at 60 FPS */
+	if (iniReader.ReadBoolean(INI_KEY, "DiskFix", true)) {
+		pattern = hook::pattern("A1 ?? ?? ?? ?? 0F AF C1 99 F7 7C 24 18"); //411099
+		char diskFix[] = {0xB8, 0x02, 0x00, 0x00, 0x00};
+		injector::WriteMemoryRaw(pattern.get_first(0), diskFix, sizeof(diskFix), true);
+	}
+
+	/* Fix fast Zurg and other flying enemies at 60 FPS */
+	if (iniReader.ReadBoolean(INI_KEY, "ZurgFix", true)) {
+		pattern = hook::pattern("DD 45 F4 5B DD 58 10 A1 ?? ?? ?? ?? C9 C3"); //4DBD3D
+		
+		auto zurgXJump = hook::pattern("C1 FB 04 2B CB 8B 5C 24 24 89 0E"); //407F8E
+		char zurgXFix[] = {0x0F, 0xAF, 0x1D, *zurgXJump.get_first<char>(0x88), *zurgXJump.get_first<char>(0x89), *zurgXJump.get_first<char>(0x8A), *zurgXJump.get_first<char>(0x8B),
+		                   0xC1, 0xFB, 0x05,
+						   0x29, 0xD9,
+						   0xC3,
+						   0x90};
+
+		auto zurgZJump = hook::pattern("C1 FA 04 2B CA 89 4E 08 0F BF 46 0E"); //407FB0
+		char zurgZFix[] = {0x0F, 0xAF, 0x15, *zurgXJump.get_first<char>(0x88), *zurgXJump.get_first<char>(0x89), *zurgXJump.get_first<char>(0x8A), *zurgXJump.get_first<char>(0x8B),
+		                   0xC1, 0xFA, 0x05,
+						   0x29, 0xD1,
+						   0xC3,
+						   0x90};
+
+		injector::WriteMemoryRaw(pattern.get_first(0x60), zurgXFix, sizeof(zurgXFix), true);
+		injector::WriteMemoryRaw(pattern.get_first(0x7E), zurgZFix, sizeof(zurgZFix), true);
+
+		injector::WriteMemory<uint8_t>(zurgXJump.get_first(0), '\xE8', true);
+		injector::WriteMemory(zurgXJump.get_first(1), (int) pattern.get_first(0x60) - (int) zurgXJump.get_first(5), true);
+
+		injector::WriteMemory<uint8_t>(zurgZJump.get_first(0), '\xE8', true);
+		injector::WriteMemory(zurgZJump.get_first(1), (int) pattern.get_first(0x7E) - (int) zurgZJump.get_first(5), true);
 	}
 
 	return 0;
