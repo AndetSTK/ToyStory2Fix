@@ -171,6 +171,18 @@ DWORD WINAPI Init(LPVOID bDelay)
                              0xC1, 0xE9, 0x02,
                              0x56,
                              0x51,
+                             0xD9, 0x46, 0xC,
+                             0xC7, 0x46, 0xC, 0x00, 0x00, 0x80, 0x37,
+                             0xD8, 0x46, 0xC,
+                             0xD9, 0x5E, 0xC,
+                             0xD9, 0x46, 0x10,
+                             0xC7, 0x46, 0x10, 0x00, 0x00, 0x80, 0x37,
+                             0xD8, 0x46, 0x10,
+                             0xD9, 0x5E, 0x10,
+                             0xD9, 0x46, 0x14,
+                             0xC7, 0x46, 0x14, 0x00, 0x00, 0x80, 0x37,
+                             0xD8, 0x46, 0x14,
+                             0xD9, 0x5E, 0x14,
                              0xD9, 0x46, 0x1C,
                              0xC7, 0x46, 0x1C, 0x00, 0x00, 0x80, 0x37,
                              0xD8, 0x46, 0x1C,
@@ -181,7 +193,7 @@ DWORD WINAPI Init(LPVOID bDelay)
                              0xD9, 0x5E, 0x20,
                              0x83, 0xC6, 0x24,
                              0x83, 0xE9, 0x09,
-                             0x75, 0xD8,
+                             0x75, 0xA8,
                              0x59,
                              0x5E,
                              0xC3};
@@ -217,14 +229,14 @@ DWORD WINAPI Init(LPVOID bDelay)
                            0xC3,
                            0x90};
 
-        injector::WriteMemoryRaw(pattern.get_first(0x60), zurgXFix, sizeof(zurgXFix), true);
-        injector::WriteMemoryRaw(pattern.get_first(0x7E), zurgZFix, sizeof(zurgZFix), true);
+        injector::WriteMemoryRaw(pattern.get_first(0x90), zurgXFix, sizeof(zurgXFix), true);
+        injector::WriteMemoryRaw(pattern.get_first(0xAE), zurgZFix, sizeof(zurgZFix), true);
 
         injector::WriteMemory<uint8_t>(zurgXJump.get_first(0), '\xE8', true);
-        injector::WriteMemory(zurgXJump.get_first(1), (int) pattern.get_first(0x60) - (int) zurgXJump.get_first(5), true);
+        injector::WriteMemory(zurgXJump.get_first(1), (int) pattern.get_first(0x90) - (int) zurgXJump.get_first(5), true);
 
         injector::WriteMemory<uint8_t>(zurgZJump.get_first(0), '\xE8', true);
-        injector::WriteMemory(zurgZJump.get_first(1), (int) pattern.get_first(0x7E) - (int) zurgZJump.get_first(5), true);
+        injector::WriteMemory(zurgZJump.get_first(1), (int) pattern.get_first(0xAE) - (int) zurgZJump.get_first(5), true);
     }
 
     return 0;
